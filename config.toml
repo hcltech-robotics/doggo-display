@@ -1,0 +1,13 @@
+[[blocks]]
+top_line = "IP Address:"
+second_line = "!hostname -I"  # Run shell command
+button_enabled = false
+function_to_run = ""
+refresh_interval = 0  # No auto-refresh
+
+[[blocks]]
+top_line = "CPU Usage:"
+second_line = "!top -bn1 | grep 'Cpu(s)' | awk '{print $2}'"  # Run shell command
+button_enabled = false
+function_to_run = ""
+refresh_interval = 2  # Refresh every 2 seconds
