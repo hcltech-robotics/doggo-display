@@ -2,7 +2,7 @@ mod config;
 mod display;
 mod platform;
 
-use config::{DisplayBlock, load_config};
+use config::{DisplayBlock, load_config, run_command};
 use display::Display;
 use gpio_cdev::{Chip, LineRequestFlags};
 use platform::get_i2c_bus;
@@ -46,13 +46,15 @@ fn refresh_display(
 fn read_rotation(
     clk_line: u32,
     dt_line: u32,
+    sw_line: u32,
     clk_state: &mut u8,
     dt_state: &mut u8,
+    sw_state: &mut u8,
 ) -> Option<i32> {
     // Initialize GPIO chip (should be done once at startup)
     let mut chip = Chip::new("/dev/gpiochip4").unwrap();
 
-    // Request lines for CLK and DT (do this once in your setup, not in every loop)
+    // Request lines for CLK, DT, and SW (do this once in your setup, not in every loop)
     let clk = chip
         .get_line(clk_line)
         .unwrap()
@@ -63,12 +65,18 @@ fn read_rotation(
         .unwrap()
         .request(LineRequestFlags::INPUT, 0, "dt")
         .unwrap();
+    let sw = chip
+        .get_line(sw_line)
+        .unwrap()
+        .request(LineRequestFlags::INPUT, 0, "sw")
+        .unwrap();
 
-    // Read current state of CLK and DT
+    // Read current state of CLK, DT, and SW
     let clk_value = clk.get_value().unwrap();
     let dt_value = dt.get_value().unwrap();
+    let sw_value = sw.get_value().unwrap();
 
-    // Debounce: check if state change has occurred (only process change if state has changed)
+    // Debounce: check if state change has occurred for CLK and DT
     if clk_value != *clk_state {
         *clk_state = clk_value;
 
@@ -82,7 +90,15 @@ fn read_rotation(
         }
     }
 
-    // If no rotation detected, return None
+    // Detect button press (SW state change)
+    if sw_value == 0 && *sw_state == 1 {
+        *sw_state = 0; // Button is pressed
+        return Some(42); // Return a special value to indicate button press
+    } else if sw_value == 1 && *sw_state == 0 {
+        *sw_state = 1; // Button is released
+    }
+
+    // If no rotation or button press detected, return None
     None
 }
 
@@ -120,18 +136,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Timing variables for display refresh
     let mut last_refresh = Instant::now();
     let mut loaded_block_content = false;
+    let mut button_pressed = false;
 
     // Set GPIO pins for rotary encoder
     let clk_pin = 17;
     let dt_pin = 27;
+    let sw_pin = 22;
 
     // Initialize state variables for CLK and DT
-    let mut clk_state = 0;
-    let mut dt_state = 0;
+    let mut clk_state = 1; // Initial state (high)
+    let mut dt_state = 1; // Initial state (high)
+    let mut sw_state = 1; // Initial state (button not pressed)
 
     loop {
         // Read rotation direction from the rotary encoder
-        if let Some(rotation) = read_rotation(clk_pin, dt_pin, &mut clk_state, &mut dt_state) {
+        if let Some(rotation) = read_rotation(
+            clk_pin,
+            dt_pin,
+            sw_pin,
+            &mut clk_state,
+            &mut dt_state,
+            &mut sw_state,
+        ) {
             loaded_block_content = false; // Reset loaded content flag
             let active_index = get_active_block_index();
             let new_index = match rotation {
@@ -143,13 +169,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         active_index - 1
                     }
                 } // Counter-clockwise: Previous block
+                42 => {
+                    button_pressed = true;
+                    active_index
+                } // Button press
                 _ => active_index,
             };
             set_active_block_index(new_index);
         }
 
         let active_index = get_active_block_index();
-        let block = &config.blocks[active_index];
+        let block: &DisplayBlock = &config.blocks[active_index];
+
+        if button_pressed & block.button_enabled {
+            let function = &block.function_to_run;
+            println!("Running function: {}", function);
+            let output = run_command(function);
+            println!("Output: {}", output);
+            display.write_text("Button Pressed", &output)?;
+            button_pressed = false;
+            thread::sleep(Duration::from_secs(2));
+        }
 
         // Refresh the display as needed
         refresh_display(

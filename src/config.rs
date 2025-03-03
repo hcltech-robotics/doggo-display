@@ -35,7 +35,7 @@ impl DisplayBlock {
     }
 }
 
-fn run_command(cmd: &str) -> String {
+pub fn run_command(cmd: &str) -> String {
     // Try running the command directly
     let direct_output = Command::new(cmd)
         .output()
