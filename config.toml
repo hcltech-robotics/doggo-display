@@ -1,13 +1,54 @@
-[[blocks]]
-top_line = "IP Address:"
-second_line = "!hostname -I"  # Run shell command
-button_enabled = false
-function_to_run = ""
-refresh_interval = 0  # No auto-refresh
+# Configuration for the Display Daemon
+
+[hardware]
+# Path to the I2C bus for OLED display communication
+i2c_bus = "/dev/i2c-1"
+
+# Path to the GPIO chip for handling the rotary encoder
+chip = "/dev/gpiochip4"
+
+# GPIO pin assignments for rotary encoder (CLK, DT, SW)
+clk = 17  # GPIO pin for the clock signal
+dt = 27   # GPIO pin for the data signal
+sw = 22   # GPIO pin for the button (switch) signal
+
+# Block configurations to display on the OLED screen
 
 [[blocks]]
+# Top line of the display (e.g., a static label or dynamic information)
+top_line = "IP Address:"
+# Second line can execute a shell command to fetch data (use `!` to run shell commands)
+second_line = "!hostname -I"  # Display the current IP address by running the shell command
+
+# Button functionality for this block
+button_enabled = true  # Set to true to enable functionality when the button is pressed
+function_to_run = "echo 'Button Pressed'"  # A shell command to execute when the button is pressed
+
+# Set the refresh interval (in seconds). 0 means no automatic refresh.
+refresh_interval = 0  # No auto-refresh for this block, user must refresh manually
+
+[[blocks]]
+# Top line displaying CPU usage
 top_line = "CPU Usage:"
-second_line = "!top -bn1 | grep 'Cpu(s)' | awk '{print $2}'"  # Run shell command
-button_enabled = false
-function_to_run = ""
-refresh_interval = 2  # Refresh every 2 seconds
+# Second line executes a command to get CPU usage percentage
+second_line = "!top -bn1 | grep 'Cpu(s)' | awk '{print $2}'"  # Extract CPU usage from `top` command
+
+# Button functionality for this block
+button_enabled = false  # No button functionality for this block
+function_to_run = ""  # No action when button is pressed
+
+# Auto-refresh interval to update CPU usage every 2 seconds
+refresh_interval = 2  # Refresh every 2 seconds to keep the CPU usage updated
+
+[[blocks]]
+# Top line displaying a button action, e.g., shutdown
+top_line = "Shutdown"
+second_line = ""  # No second line content for this block, button-only block
+
+# Button functionality to execute shutdown
+button_enabled = true  # Enable button functionality
+function_to_run = "shutdown"  # Command to execute when the button is pressed
+
+# No auto-refresh for this block, it just waits for a button press
+refresh_interval = 0
+
