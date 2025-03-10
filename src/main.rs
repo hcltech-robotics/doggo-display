@@ -7,6 +7,9 @@ use display::Display;
 use gpio_cdev::{Chip, LineRequestFlags};
 use platform::get_i2c_bus;
 use std::{sync::mpsc, thread, time::Duration, time::Instant};
+use tracing::{debug, error, info};
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 enum RotaryEvent {
     Clockwise,
@@ -34,36 +37,69 @@ fn refresh_display(
         && last_refresh.elapsed() >= Duration::from_secs(block.refresh_interval)
     {
         if let Err(e) = update_display(display, block) {
-            eprintln!("Error updating display: {}", e);
+            error!("Error updating display: {}", e);
         }
         *last_refresh = Instant::now();
     } else if block.refresh_interval == 0 && !*loaded_block_content {
         *loaded_block_content = true;
         if let Err(e) = update_display(display, block) {
-            eprintln!("Error updating display: {}", e);
+            error!("Error updating display: {}", e);
         }
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let i2c = get_i2c_bus()?;
-    let mut display = Display::new(i2c);
+    // Set up file appender
+    let file_appender = RollingFileAppender::new(
+        Rotation::DAILY,
+        "/var/log/doggo-display",
+        "doggo-display.log",
+    );
 
+    // Create a layer for file logging
+    let file_layer = fmt::layer().with_writer(file_appender).with_ansi(false); // Disable ANSI colors in log files
+
+    // Create a layer for stdout (for journalctl)
+    let stdout_layer = fmt::layer().with_writer(std::io::stdout);
+
+    // Register both layers with the subscriber
+    tracing_subscriber::registry()
+        .with(file_layer)
+        .with(stdout_layer)
+        .with(tracing_subscriber::filter::LevelFilter::DEBUG)
+        .init();
+
+    info!("Starting up");
+
+    info!("Loading config...");
     let config = load_config("config.toml").unwrap_or_else(|_| {
-        display.write_text("Failed to", "load config.toml").unwrap();
+        error!("Failed to load config.toml");
         std::process::exit(1);
     });
 
+    // Read I2C bus from config
+    let i2c_bus = &config.hardware.i2c_bus;
+    info!("Using I2C bus: {}", i2c_bus);
+
+    // Initialize I2C using config
+    let i2c = get_i2c_bus(i2c_bus)?;
+    let mut display = Display::new(i2c);
+    info!("Display initialized");
+
     if config.blocks.is_empty() {
         display.write_text("No config", "found")?;
+        error!("No blocks found in config.toml");
         return Ok(());
     }
+    info!("Config loaded");
 
-    let gpio = config.gpio.clone();
+    info!("Starting rotary encoder thread...");
+    let gpio = config.hardware.clone();
 
     let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || rotary_encoder_thread(&gpio.chip, gpio.clk, gpio.dt, gpio.sw, tx));
+    info!("Rotary encoder thread started");
 
     let mut last_refresh = Instant::now();
     let mut loaded_block_content = false;
@@ -74,9 +110,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             loaded_block_content = false;
             match event {
                 RotaryEvent::Clockwise => {
+                    debug!("Rotary event: Clockwise");
                     active_index = (active_index + 1) % config.blocks.len();
                 }
                 RotaryEvent::CounterClockwise => {
+                    debug!("Rotary event: CounterClockwise");
                     if active_index == 0 {
                         active_index = config.blocks.len() - 1;
                     } else {
@@ -84,10 +122,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 RotaryEvent::ButtonPress => {
+                    debug!("Rotary event: ButtonPress");
                     let block = &config.blocks[active_index];
                     if block.button_enabled {
                         let output = run_command(&block.function_to_run);
-                        println!("Running function: {}", block.function_to_run);
+                        info!("Running function: {}", block.function_to_run);
                         display.write_text("Button Pressed", &output)?;
                         thread::sleep(Duration::from_secs(2));
                     }

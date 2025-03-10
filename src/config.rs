@@ -2,15 +2,17 @@ use serde::Deserialize;
 use std::error::Error;
 use std::fs;
 use std::process::Command;
+use tracing::{debug, error, info};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub blocks: Vec<DisplayBlock>,
-    pub gpio: GpioConfig, // Add GPIO settings
+    pub hardware: HardwareConfig, // Add hardware settings
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct GpioConfig {
+pub struct HardwareConfig {
+    pub i2c_bus: String,
     pub chip: String,
     pub clk: u32,
     pub dt: u32,
@@ -45,6 +47,8 @@ impl DisplayBlock {
 }
 
 pub fn run_command(cmd: &str) -> String {
+    info!("Running command: {}", cmd);
+
     // Try running the command directly
     let direct_output = Command::new(cmd)
         .output()
@@ -53,6 +57,7 @@ pub fn run_command(cmd: &str) -> String {
 
     if let Some(output) = direct_output {
         if !output.is_empty() {
+            info!("Command output: {}", output);
             return output;
         }
     }
@@ -65,11 +70,25 @@ pub fn run_command(cmd: &str) -> String {
         .ok()
         .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
 
+    if let Some(output) = &shell_output {
+        info!("Shell command output: {}", output);
+    } else {
+        error!("Failed to run command: {}", cmd);
+    }
+
     shell_output.unwrap_or_else(|| format!("Failed to run: {}", cmd))
 }
 
 pub fn load_config(path: &str) -> Result<Config, Box<dyn Error>> {
+    info!("Loading config from path: {}", path);
+
     let content = fs::read_to_string(path)?;
+    info!("Config file read successfully");
+
     let config: Config = toml::from_str(&content)?;
+    info!("Config file parsed successfully");
+
+    debug!("Loaded config: {:?}", config);
+
     Ok(config)
 }

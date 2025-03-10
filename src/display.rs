@@ -2,6 +2,7 @@ use embedded_hal::i2c::I2c;
 use linux_embedded_hal::I2cdev;
 use std::thread::sleep;
 use std::time::Duration;
+use tracing::{debug, error, info};
 
 const LCD_ADDR: u8 = 0x27;
 const LCD_BACKLIGHT: u8 = 0x08; // Backlight ON
@@ -16,12 +17,17 @@ pub struct Display {
 impl Display {
     pub fn new(i2c: I2cdev) -> Self {
         let mut dplay = Display { i2c };
-        dplay.init().expect("Failed to initialize display");
+        if let Err(e) = dplay.init() {
+            error!("Failed to initialize display: {}", e);
+        } else {
+            info!("Display initialized successfully");
+        }
         dplay
     }
 
     fn send_nibble(&mut self, nibble: u8, mode: u8) -> Result<(), Box<dyn std::error::Error>> {
         let data = nibble | mode | LCD_BACKLIGHT;
+
         self.i2c.write(LCD_ADDR, &[data | LCD_ENABLE])?; // E=1
         sleep(Duration::from_micros(500)); // Small delay
         self.i2c.write(LCD_ADDR, &[data & !LCD_ENABLE])?; // E=0
@@ -42,6 +48,8 @@ impl Display {
     }
 
     fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        info!("Initializing display...");
+
         sleep(Duration::from_millis(50)); // Power-on delay
         self.send_nibble(0x30, LCD_CMD)?; // Wake up
         sleep(Duration::from_millis(5));
@@ -55,6 +63,7 @@ impl Display {
         self.send_command(0x0C)?; // Display on, cursor off
         self.send_command(0x06)?; // Entry mode: Increment cursor
         self.send_command(0x01)?; // Clear display
+        info!("Display initialized");
         Ok(())
     }
 
@@ -63,21 +72,26 @@ impl Display {
         line1: &str,
         line2: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        info!("Writing text to display");
+
         self.send_command(0x01)?; // Clear display
         sleep(Duration::from_millis(2));
 
         // Write first line
         self.send_command(0x80)?; // Move to first line (0x80 is DDRAM address for line 1)
+        debug!("Writing to first line: {}", line1);
         for c in line1.bytes() {
             self.send_byte(c, LCD_DATA)?;
         }
 
         // Move to the second line
         self.send_command(0xC0)?; // Move to second line (0xC0 is DDRAM address for line 2)
+        debug!("Writing to second line: {}", line2);
         for c in line2.bytes() {
             self.send_byte(c, LCD_DATA)?;
         }
 
+        info!("Text written to display successfully");
         Ok(())
     }
 }
