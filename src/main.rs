@@ -2,7 +2,6 @@ mod config;
 mod display;
 mod platform;
 
-use clap::{Arg, Command};
 use config::{DisplayBlock, load_config, run_command};
 use display::Display;
 use gpio_cdev::{Chip, LineRequestFlags};
@@ -47,50 +46,6 @@ fn refresh_display(
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Parse command-line arguments
-    let matches = Command::new("Rotary Encoder Display")
-        .version("1.0")
-        .author("Gabor Tar")
-        .about("Controls an OLED display using a rotary encoder")
-        .arg(
-            Arg::new("chip")
-                .short('c')
-                .long("chip")
-                .value_parser(clap::value_parser!(String))
-                .default_value("/dev/gpiochip4")
-                .help("Path to the GPIO chip"),
-        )
-        .arg(
-            Arg::new("clk")
-                .short('k')
-                .long("clk")
-                .value_parser(clap::value_parser!(u32))
-                .default_value("17")
-                .help("CLK pin number"),
-        )
-        .arg(
-            Arg::new("dt")
-                .short('d')
-                .long("dt")
-                .value_parser(clap::value_parser!(u32))
-                .default_value("27")
-                .help("DT pin number"),
-        )
-        .arg(
-            Arg::new("sw")
-                .short('s')
-                .long("sw")
-                .value_parser(clap::value_parser!(u32))
-                .default_value("22")
-                .help("SW (button) pin number"),
-        )
-        .get_matches();
-
-    let chip_path = matches.get_one::<String>("chip").unwrap().clone();
-    let clk_pin = *matches.get_one::<u32>("clk").unwrap();
-    let dt_pin = *matches.get_one::<u32>("dt").unwrap();
-    let sw_pin = *matches.get_one::<u32>("sw").unwrap();
-
     let i2c = get_i2c_bus()?;
     let mut display = Display::new(i2c);
 
@@ -104,9 +59,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    let gpio = config.gpio.clone();
+
     let (tx, rx) = mpsc::channel();
 
-    thread::spawn(move || rotary_encoder_thread(&chip_path, clk_pin, dt_pin, sw_pin, tx));
+    thread::spawn(move || rotary_encoder_thread(&gpio.chip, gpio.clk, gpio.dt, gpio.sw, tx));
 
     let mut last_refresh = Instant::now();
     let mut loaded_block_content = false;

@@ -3,9 +3,18 @@ use std::error::Error;
 use std::fs;
 use std::process::Command;
 
-#[derive(Debug, Deserialize, Clone)] // Added Clone
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub blocks: Vec<DisplayBlock>,
+    pub gpio: GpioConfig, // Add GPIO settings
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct GpioConfig {
+    pub chip: String,
+    pub clk: u32,
+    pub dt: u32,
+    pub sw: u32,
 }
 
 #[derive(Debug, Deserialize, Clone)] // Added Clone
