@@ -35,11 +35,12 @@ jobs:
 
       - name: Package release files
         run: |
-          mkdir doggo-display-release
-          cp target/aarch64-unknown-linux-gnu/release/doggo-display doggo-display-release/
-          cp setup.sh doggo-display-release/
-          cp -r systemd doggo-display-release/
-          tar -czvf doggo-display.tar.gz doggo-display-release
+          mkdir doggo-display
+          cp target/aarch64-unknown-linux-gnu/release/doggo-display doggo-display/
+          cp setup.sh doggo-display/
+          cp -r systemd doggo-display/
+          cp config.toml doggo-display/
+          tar -czvf doggo-display.tar.gz doggo-display
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
