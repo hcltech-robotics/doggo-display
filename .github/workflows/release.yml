@@ -39,4 +39,4 @@ jobs:
           files: |
             target/aarch64-unknown-linux-gnu/release/doggo-display
             setup.sh
-            doggo-display.service
+            systemd/doggo-display.service
