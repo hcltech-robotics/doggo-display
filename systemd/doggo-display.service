@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 ExecStart=/usr/local/bin/doggo-display
-WorkingDirectory=/usr/local/bin
+WorkingDirectory=/etc/doggo-display
 Restart=always
 User=root
 Group=root
