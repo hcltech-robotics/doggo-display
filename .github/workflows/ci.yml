@@ -43,7 +43,7 @@ jobs:
         run: cargo fmt -- --check
         
       - name: Run Clippy linting
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
         
       - name: Build the project
         run: cargo build --verbose

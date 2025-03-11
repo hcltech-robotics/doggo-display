@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 HCLTech Ltd. All rights reserved.
+// See the LICENSE file in the project root for more details.
+
 use linux_embedded_hal::I2cdev;
 use std::error::Error;
 use tracing::{debug, error, info}; // Import tracing macros

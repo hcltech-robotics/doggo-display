@@ -1,7 +1,22 @@
+[workspace.lints.clippy]
+pedantic = "deny"         
+
+[lints]
+workspace = true
+
 [package]
 name = "doggo-display"
-version = "0.1.0"
+version = "1.0.6"
 edition = "2024"
+rust-version = "1.85.0"
+authors = ["Gabor Tar <i.am.gabor.tar@gmail.com>"]
+
+description = "A Rust-based display interface for OLED display"
+license = "MIT"
+repository = "https://github.com/hcltech-robotics/doggo-display"
+readme = "README.md"
+keywords = ["rust", "robotics", "display", "gpio", "embedded"]
+categories = ["embedded", "hardware-support", "robotics", "system-programming"]
 
 [dependencies]
 linux-embedded-hal = "0.4.0"
