@@ -1,0 +1,15 @@
+[Unit]
+Description=Doggo Display Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/doggo-display
+WorkingDirectory=/usr/local/bin
+Restart=always
+User=root
+Group=root
+StandardOutput=append:/var/log/doggo-display/output.log
+StandardError=append:/var/log/doggo-display/error.log
+
+[Install]
+WantedBy=multi-user.target
