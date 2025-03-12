@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 HCLTech Ltd. All rights reserved.
+// See the LICENSE file in the project root for more details.
+
 use embedded_hal::i2c::I2c;
 use linux_embedded_hal::I2cdev;
 use std::thread::sleep;

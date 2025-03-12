@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 HCLTech Ltd. All rights reserved.
+// See the LICENSE file in the project root for more details.
+
 mod config;
 mod display;
 mod platform;
@@ -98,7 +102,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (tx, rx) = mpsc::channel();
 
-    thread::spawn(move || rotary_encoder_thread(&gpio.chip, gpio.clk, gpio.dt, gpio.sw, tx));
+    thread::spawn({
+        let tx = tx.clone();
+        move || {
+            if let Err(e) = rotary_encoder_thread(&gpio.chip, gpio.clk, gpio.dt, gpio.sw, &tx) {
+                error!("Error in rotary encoder thread: {}", e);
+            }
+        }
+    });
     info!("Rotary encoder thread started");
 
     let mut last_refresh = Instant::now();
@@ -150,49 +161,41 @@ fn rotary_encoder_thread(
     clk_pin: u32,
     dt_pin: u32,
     sw_pin: u32,
-    tx: mpsc::Sender<RotaryEvent>,
-) {
-    let mut chip = Chip::new(chip_path).expect("Failed to open GPIO chip");
+    tx: &mpsc::Sender<RotaryEvent>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut chip = Chip::new(chip_path)?;
 
     let clk = chip
-        .get_line(clk_pin)
-        .expect("Failed to get CLK line")
-        .request(LineRequestFlags::INPUT, 0, "clk")
-        .expect("Failed to request CLK");
-
+        .get_line(clk_pin)?
+        .request(LineRequestFlags::INPUT, 0, "clk")?;
     let dt = chip
-        .get_line(dt_pin)
-        .expect("Failed to get DT line")
-        .request(LineRequestFlags::INPUT, 0, "dt")
-        .expect("Failed to request DT");
-
+        .get_line(dt_pin)?
+        .request(LineRequestFlags::INPUT, 0, "dt")?;
     let sw = chip
-        .get_line(sw_pin)
-        .expect("Failed to get SW line")
-        .request(LineRequestFlags::INPUT, 0, "sw")
-        .expect("Failed to request SW");
+        .get_line(sw_pin)?
+        .request(LineRequestFlags::INPUT, 0, "sw")?;
 
-    let mut last_clk = clk.get_value().expect("Failed to read CLK");
-    let mut last_sw = sw.get_value().expect("Failed to read SW");
+    let mut last_clk = clk.get_value()?;
+    let mut last_sw = sw.get_value()?;
 
     loop {
-        let clk_value = clk.get_value().expect("Failed to read CLK");
-        let dt_value = dt.get_value().expect("Failed to read DT");
-        let sw_value = sw.get_value().expect("Failed to read SW");
+        let clk_value = clk.get_value()?;
+        let dt_value = dt.get_value()?;
+        let sw_value = sw.get_value()?;
 
         if clk_value != last_clk {
             if clk_value == 1 {
                 if dt_value == 0 {
-                    tx.send(RotaryEvent::Clockwise).unwrap();
+                    tx.send(RotaryEvent::Clockwise)?;
                 } else {
-                    tx.send(RotaryEvent::CounterClockwise).unwrap();
+                    tx.send(RotaryEvent::CounterClockwise)?;
                 }
             }
             last_clk = clk_value;
         }
 
         if sw_value == 0 && last_sw == 1 {
-            tx.send(RotaryEvent::ButtonPress).unwrap();
+            tx.send(RotaryEvent::ButtonPress)?;
         }
         last_sw = sw_value;
 

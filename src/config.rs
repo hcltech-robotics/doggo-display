@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 HCLTech Ltd. All rights reserved.
+// See the LICENSE file in the project root for more details.
+
 use serde::Deserialize;
 use std::error::Error;
 use std::fs;
@@ -30,7 +34,7 @@ pub struct DisplayBlock {
 
 impl DisplayBlock {
     pub fn get_top_line(&self) -> String {
-        if self.top_line.starts_with("!") {
+        if self.top_line.starts_with('!') {
             run_command(&self.top_line[1..])
         } else {
             self.top_line.clone()
@@ -38,7 +42,7 @@ impl DisplayBlock {
     }
 
     pub fn get_second_line(&self) -> String {
-        if self.second_line.starts_with("!") {
+        if self.second_line.starts_with('!') {
             run_command(&self.second_line[1..])
         } else {
             self.second_line.clone()
@@ -76,7 +80,7 @@ pub fn run_command(cmd: &str) -> String {
         error!("Failed to run command: {}", cmd);
     }
 
-    shell_output.unwrap_or_else(|| format!("Failed to run: {}", cmd))
+    shell_output.unwrap_or_else(|| format!("Failed to run: {cmd}"))
 }
 
 pub fn load_config(path: &str) -> Result<Config, Box<dyn Error>> {
