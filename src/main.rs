@@ -13,7 +13,7 @@ use platform::get_i2c_bus;
 use std::{sync::mpsc, thread, time::Duration, time::Instant};
 use tracing::{debug, error, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 enum RotaryEvent {
     Clockwise,

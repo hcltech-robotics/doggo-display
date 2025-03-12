@@ -2,7 +2,7 @@
 // Copyright (c) 2025 HCLTech Ltd. All rights reserved.
 // See the LICENSE file in the project root for more details.
 
-use embedded_hal::i2c::I2c;
+use embedded_hal::i2c::I2c as _;
 use linux_embedded_hal::I2cdev;
 use std::thread::sleep;
 use std::time::Duration;
@@ -20,7 +20,7 @@ pub struct Display {
 
 impl Display {
     pub fn new(i2c: I2cdev) -> Self {
-        let mut dplay = Display { i2c };
+        let mut dplay = Self { i2c };
         if let Err(e) = dplay.init() {
             error!("Failed to initialize display: {}", e);
         } else {

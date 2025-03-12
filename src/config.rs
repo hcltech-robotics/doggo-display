@@ -57,8 +57,7 @@ pub fn run_command(cmd: &str) -> String {
     let direct_output = Command::new(cmd)
         .output()
         .ok()
-        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
-
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned());
     if let Some(output) = direct_output {
         if !output.is_empty() {
             info!("Command output: {}", output);
@@ -72,7 +71,7 @@ pub fn run_command(cmd: &str) -> String {
         .arg(cmd)
         .output()
         .ok()
-        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned());
 
     if let Some(output) = &shell_output {
         info!("Shell command output: {}", output);
