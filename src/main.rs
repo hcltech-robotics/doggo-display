@@ -10,10 +10,11 @@ use config::{DisplayBlock, load_config, run_command};
 use display::Display;
 use gpio_cdev::{Chip, LineRequestFlags};
 use platform::get_i2c_bus;
+use std::error::Error;
 use std::{sync::mpsc, thread, time::Duration, time::Instant};
 use tracing::{debug, error, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 enum RotaryEvent {
     Clockwise,
@@ -52,7 +53,7 @@ fn refresh_display(
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     // Set up file appender
     let file_appender = RollingFileAppender::new(
         Rotation::DAILY,
@@ -76,10 +77,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting up");
 
     info!("Loading config...");
-    let config = load_config("config.toml").unwrap_or_else(|_| {
-        error!("Failed to load config.toml");
-        std::process::exit(1);
-    });
+    let config = load_config("config.toml").map_err(|e| {
+        error!("Failed to load config.toml: {}", e);
+        e
+    })?;
 
     // Read I2C bus from config
     let i2c_bus = &config.hardware.i2c_bus;
